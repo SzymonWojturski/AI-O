@@ -176,7 +176,9 @@ Prometheus scrapes metrics from the OpenTelemetry Collector every 15 seconds. Th
 
 Prometheus data is retained locally for 30 days and forwarded to Grafana Cloud via `remote_write` for long-term retention and centralised access.
 
- (traces), and Loki (logs). The following dashboards are provided:
+## 5.5 Visualisation Layer – Grafana Cloud
+
+Grafana Cloud connects to three data sources: Prometheus (metrics), Tempo (traces), and Loki (logs). The following dashboards are provided:
 
 - **LLM Performance Dashboard** – request rate, p50/p95/p99 latency, token usage trends, error rate.
 - **MCP Tool Usage Dashboard** – call frequency per tool, Reddit query success rate, tool latency distribution.
