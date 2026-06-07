@@ -2,9 +2,9 @@
 
 In this project, we design an AI system with full observability for monitoring both the behavior of a Large Language Model (LLM) and its interactions with external tools.
 
-The system is hosted on AWS and uses OpenLIT as the core observability platform. Through OpenLIT, we monitor conversations handled by the Gemini LLM. The model is extended with tool-calling capabilities via an MCP (Model Context Protocol) server, which enables it to retrieve additional information from external sources—in this case, Reddit.
+The system is hosted on AWS and uses OpenLIT as the core observability platform. Through OpenLIT, we monitor conversations handled by the Gemini LLM. The model is extended with tool-calling capabilities via an MCP (Model Context Protocol) server, which enables it to retrieve additional information from external sources—in this case, Wikipedia.
 
-To ensure complete visibility into the system, we integrate Grafana Cloud for monitoring and visualization. This allows us to track not only the LLM's internal performance (such as latency and token usage), but also its interactions with the MCP server and external APIs.
+To ensure complete visibility into the system, we integrate Grafana Cloud for monitoring and visualization. This allows us to track not only the LLM's internal performance (such as latency and token usage), but also its interactions with the MCP server and the external Wikipedia API.
 
 The goal of this setup is to provide end-to-end observability of an AI application, making it easier to debug, optimize, and understand how the model behaves in real-world scenarios.
 
@@ -18,7 +18,7 @@ The proposed solution combines modern LLM orchestration with observability pract
 The system uses Gemini as the primary LLM responsible for generating responses. The model processes user input and, when needed, retrieves external data via tools.
 
 **Model Context Protocol (MCP) Server:**  
-The MCP server acts as an intermediary layer between the LLM and external data sources. It enables tool usage by the LLM—in this case, querying Reddit. This introduces additional complexity and requires visibility into tool calls, latency, and response quality.
+The MCP server acts as an intermediary layer between the LLM and external data sources. It exposes two tools to the LLM—`search_wikipedia` (finds matching article titles) and `get_summary` (returns a plain-text article summary). This introduces additional complexity and requires visibility into tool calls, latency, and response quality.
 
 **OpenLIT (hosted on AWS):**  
 OpenLIT is used for LLM observability. It captures:
@@ -30,8 +30,7 @@ OpenLIT is used for LLM observability. It captures:
 Running OpenLIT on AWS ensures scalability, reliability, and integration with cloud-native monitoring practices.
 
 **Observability Stack:**
-- OpenTelemetry: Standard for collecting traces, metrics, and logs across distributed systems.
-- Prometheus: Used for scraping and storing time-series metrics such as request latency, token counts, and error rates.
+- OpenTelemetry: Standard for collecting traces, metrics, and logs across distributed systems. The OpenTelemetry Collector exports all three signal types directly to Grafana Cloud.
 
 **Visualization Layer:**
 - Grafana Cloud: Provides dashboards and alerting capabilities. It visualizes:
@@ -50,7 +49,7 @@ This stack enables full observability across the AI pipeline—from user query t
 The application consists of a conversational interface powered by Gemini. When a user submits a query:
 1. The LLM processes the request.
 2. If external knowledge is needed, it invokes the MCP server.
-3. The MCP server queries Reddit and returns relevant data.
+3. The MCP server queries the Wikipedia API and returns relevant data.
 4. The LLM incorporates this data into the final response.
 
 **Observability Layer:**  
@@ -62,14 +61,14 @@ Observability is implemented using OpenLIT and OpenTelemetry instrumentation:
 
 Key observability goals:
 - Understand LLM behavior and performance
-- Monitor tool usage (Reddit queries via MCP)
+- Monitor tool usage (Wikipedia queries via MCP)
 - Detect anomalies (e.g., slow responses, failed tool calls)
 - Analyze cost drivers (token consumption)
 
 **Visualization Layer:**  
 Grafana Cloud aggregates and visualizes all collected data:
 - Dashboards display real-time system performance
-- Traces show the full lifecycle of a request (LLM -> MCP -> Reddit -> LLM)
+- Traces show the full lifecycle of a request (LLM -> MCP -> Wikipedia -> LLM)
 - Alerts notify when thresholds are exceeded (e.g., high latency or error rates)
 
 This enables both operational monitoring and deeper analysis of LLM behavior.
@@ -85,11 +84,11 @@ The architecture follows a pipeline model with three main stages: LLM -> Observa
 **1. Interaction Layer (LLM):**
 - User sends a query
 - Gemini processes the input
-- Optional: invokes MCP server for Reddit data
+- Optional: invokes MCP server for Wikipedia data
 
 **2. Integration Layer (MCP Server):**
 - Receives tool requests from the LLM
-- Queries Reddit
+- Queries the Wikipedia API
 - Returns structured data to the LLM
 
 **3. Observability Layer:**
@@ -97,11 +96,10 @@ The architecture follows a pipeline model with three main stages: LLM -> Observa
   - Prompts/responses
   - Tool calls
   - Latency and token metrics
-- OpenTelemetry instruments all components
-- Prometheus stores metrics
+- OpenTelemetry instruments all components and exports telemetry to Grafana Cloud
 
 **4. Visualization Layer:**
-- Grafana Cloud connects to Prometheus and telemetry sources
+- Grafana Cloud receives telemetry directly from the OpenTelemetry Collector
 - Displays dashboards for:
   - LLM performance
   - MCP usage
@@ -110,9 +108,9 @@ The architecture follows a pipeline model with three main stages: LLM -> Observa
 **Data Flow Summary:**
 1. User -> LLM (Gemini)  
 2. LLM -> MCP Server (if external data needed)  
-3. MCP -> Reddit -> MCP -> LLM  
+3. MCP -> Wikipedia -> MCP -> LLM  
 4. OpenLIT captures all steps  
-5. Metrics/logs/traces -> Prometheus / OpenTelemetry  
+5. Metrics/logs/traces -> OpenTelemetry Collector -> Grafana Cloud  
 6. Grafana Cloud visualizes and monitors the system  
 
 This architecture ensures full transparency of the AI system, enabling debugging, optimization, and reliable production deployment.
@@ -123,28 +121,27 @@ This section describes the detailed technical architecture of the AI observabili
 
 ## 5.1 Overview
 
-The architecture is based on a microservice approach hosted on AWS. Each component fulfils a specific role, and all components communicate via standardised protocols (HTTP/REST, gRPC, OpenTelemetry OTLP).
+The architecture is based on a microservice approach hosted on AWS. Each component fulfils a specific role, and all components communicate via standardised protocols (HTTP/REST, OpenTelemetry OTLP).
 
 | Layer | Component | Role |
 |---|---|---|
 | Application | Gemini API (Google) | Primary LLM – generates responses |
-| Integration | MCP Server (AWS EC2) | Tool broker – queries Reddit |
+| Integration | MCP Server (AWS EC2) | Tool broker – queries Wikipedia |
 | Observability | OpenLIT (AWS EC2) | LLM telemetry collection |
-| Observability | OpenTelemetry Collector | Aggregates traces, metrics, logs |
-| Storage | Prometheus (AWS EC2) | Time-series metrics storage |
-| Visualisation | Grafana Cloud | Dashboards, alerts, trace viewer |
+| Observability | OpenTelemetry Collector | Aggregates traces, metrics, logs and exports to Grafana Cloud |
+| Visualisation | Grafana Cloud | Dashboards, alerts, trace viewer, metrics storage |
 
 ## 5.2 Application Layer – Gemini + MCP
 
-The application layer is the entry point for user requests. The client application (e.g. a Python script or web UI) sends a prompt to Gemini via the Google Generative AI SDK. Gemini is configured with access to a custom tool set exposed by the MCP server.
+The application layer is the entry point for user requests. The client application (a Python CLI script) sends a prompt to Gemini via the Google Gen AI SDK (`google-genai`). Gemini is configured with access to a custom tool set exposed by the MCP server.
 
-When Gemini determines that additional context is required – for example, current opinions or discussions from Reddit – it issues a structured tool call. This call is forwarded to the MCP server, which handles the external API interaction, and the result is returned to Gemini for incorporation into the final response.
+When Gemini determines that additional context is required – for example, an encyclopedic fact or definition – it issues a structured tool call. This call is forwarded to the MCP server, which handles the external API interaction, and the result is returned to Gemini for incorporation into the final response.
 
 Key design decisions:
 
 - Gemini is accessed exclusively via API – no local model hosting is required.
-- The MCP server runs as a lightweight FastAPI service on a single EC2 instance.
-- Reddit queries use the PRAW (Python Reddit API Wrapper) library with OAuth2 authentication.
+- The MCP server is built with the official MCP Python SDK (FastMCP) and runs over the Streamable HTTP transport on a single EC2 instance.
+- Wikipedia queries use the public Wikimedia REST and `w/api.php` endpoints over plain HTTP, with a compliant `User-Agent` header (no API key or authentication required).
 
 ## 5.3 Observability Layer – OpenLIT & OpenTelemetry
 
@@ -154,36 +151,38 @@ OpenLIT is deployed as a Docker container on a dedicated EC2 instance. It auto-i
 - Token counts (input tokens, output tokens, total cost estimate).
 - Latency of each LLM call (wall-clock time from request to first token and to completion).
 - MCP tool invocations – logged as child spans within the parent LLM trace.
-- Error events – e.g. API timeouts, rate-limit errors, failed Reddit queries.
+- Error events – e.g. API timeouts, rate-limit errors, failed Wikipedia queries.
 
-All telemetry is exported via the OpenTelemetry Protocol (OTLP) to an OpenTelemetry Collector running on the same host. The Collector applies filtering and batching, then forwards:
+All telemetry is exported via the OpenTelemetry Protocol (OTLP) to an OpenTelemetry Collector running on the same host. The Collector applies filtering and batching, then forwards all three signal types directly to Grafana Cloud:
 
 - **Traces** → Grafana Cloud Tempo (distributed tracing backend)
-- **Metrics** → Prometheus via a `remote_write` endpoint
+- **Metrics** → Grafana Cloud (Prometheus-compatible metrics endpoint via `remote_write`)
 - **Logs** → Grafana Cloud Loki (log aggregation backend)
 
-## 5.4 Storage Layer – Prometheus
+There is no self-hosted metrics database; Grafana Cloud's managed metrics backend stores the time-series data.
 
-Prometheus scrapes metrics from the OpenTelemetry Collector every 15 seconds. The following metric families are stored:
+## 5.4 Metrics
+
+The following metric families are collected by OpenLIT / OpenTelemetry and exported to Grafana Cloud:
 
 | Metric name | Type | Description |
 |---|---|---|
 | `llm_request_duration_seconds` | Histogram | End-to-end LLM call latency |
 | `llm_token_usage_total` | Counter | Cumulative token consumption |
 | `mcp_tool_calls_total` | Counter | Number of MCP tool invocations |
-| `mcp_tool_duration_seconds` | Histogram | Reddit query latency via MCP |
+| `mcp_tool_duration_seconds` | Histogram | Wikipedia query latency via MCP |
 | `llm_errors_total` | Counter | Count of failed LLM or tool calls |
 
-Prometheus data is retained locally for 30 days and forwarded to Grafana Cloud via `remote_write` for long-term retention and centralised access.
+Metrics are sent straight from the OpenTelemetry Collector to Grafana Cloud's managed metrics backend, where they are retained and made available for dashboards and alerts.
 
 ## 5.5 Visualisation Layer – Grafana Cloud
 
-Grafana Cloud connects to three data sources: Prometheus (metrics), Tempo (traces), and Loki (logs). The following dashboards are provided:
+Grafana Cloud connects to its managed backends: metrics (Prometheus-compatible), Tempo (traces), and Loki (logs). The following dashboards are provided:
 
 - **LLM Performance Dashboard** – request rate, p50/p95/p99 latency, token usage trends, error rate.
-- **MCP Tool Usage Dashboard** – call frequency per tool, Reddit query success rate, tool latency distribution.
+- **MCP Tool Usage Dashboard** – call frequency per tool, Wikipedia query success rate, tool latency distribution.
 - **Cost Analysis Dashboard** – estimated API cost per hour/day based on token counters.
-- **Trace Explorer** – full end-to-end trace view: User → Gemini → MCP → Reddit → Gemini → User.
+- **Trace Explorer** – full end-to-end trace view: User → Gemini → MCP → Wikipedia → Gemini → User.
 
 ---
 
@@ -198,7 +197,7 @@ The following EC2 instances are used (all in the same VPC and availability zone 
 | Instance | Type | OS | Services hosted |
 |---|---|---|---|
 | app-server | t3.small | Ubuntu 22.04 | Python app + MCP server |
-| observability-server | t3.medium | Ubuntu 22.04 | OpenLIT, OTel Collector, Prometheus |
+| observability-server | t3.medium | Ubuntu 22.04 | OpenLIT, OTel Collector |
 
 ## 6.2 Application Environment Variables
 
@@ -207,10 +206,8 @@ The following environment variables must be set on the `app-server` instance. Th
 | Variable | Example value | Description |
 |---|---|---|
 | `GEMINI_API_KEY` | `AIza...` | Google AI Studio API key |
-| `MCP_SERVER_URL` | `http://localhost:8000` | Base URL of the MCP server |
-| `REDDIT_CLIENT_ID` | `abc123` | Reddit OAuth2 client ID |
-| `REDDIT_CLIENT_SECRET` | `secret456` | Reddit OAuth2 client secret |
-| `REDDIT_USER_AGENT` | `llm-obs-bot/1.0` | User-agent string for Reddit API |
+| `MCP_SERVER_URL` | `http://localhost:8000/mcp` | Base URL of the MCP server |
+| `WIKIPEDIA_USER_AGENT` | `llm-obs-bot/1.0 (contact: you@example.com)` | Compliant User-Agent for the Wikipedia API |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://<obs-ip>:4318` | OpenTelemetry Collector endpoint |
 
 ## 6.3 OpenLIT Configuration
@@ -222,12 +219,12 @@ import openlit
 
 openlit.init(
     otlp_endpoint="http://<observability-server-ip>:4318",
-    application_name="llm-reddit-bot",
+    application_name="llm-wikipedia-bot",
     environment="production"
 )
 ```
 
-OpenLIT automatically patches the Google Generative AI SDK upon initialisation. No manual instrumentation of individual API calls is required.
+OpenLIT automatically patches the Google Gen AI SDK upon initialisation. No manual instrumentation of individual API calls is required.
 
 ## 6.4 OpenTelemetry Collector Configuration
 
@@ -235,24 +232,18 @@ The OpenTelemetry Collector is configured via `otel-collector-config.yaml`. Key 
 
 - **Receivers:** `otlp` (gRPC on `:4317`, HTTP on `:4318`) to accept telemetry from OpenLIT.
 - **Processors:** `batch` (max 512 spans, timeout 5 s) and `memory_limiter` (max 512 MiB) to prevent OOM.
-- **Exporters:** `prometheusremotewrite` to Prometheus on `localhost:9090`, `otlphttp/tempo` to Grafana Cloud Tempo, `loki` to Grafana Cloud Loki.
-- **Pipelines:** traces pipeline (otlp → batch → tempo), metrics pipeline (otlp → batch → prometheus), logs pipeline (otlp → batch → loki).
+- **Exporters:** `otlphttp/tempo` to Grafana Cloud Tempo, `prometheusremotewrite` to Grafana Cloud's metrics endpoint, `loki` to Grafana Cloud Loki.
+- **Pipelines:** traces pipeline (otlp → batch → tempo), metrics pipeline (otlp → batch → Grafana Cloud metrics), logs pipeline (otlp → batch → loki).
 
-## 6.5 Prometheus Configuration
+All three exporters point directly at Grafana Cloud; there is no intermediate Prometheus instance.
 
-Prometheus is configured to scrape itself and accept `remote_write` from the OTel Collector. The `prometheus.yml` file includes:
+## 6.5 Grafana Cloud Connection
 
-- `global.scrape_interval: 15s` – default scrape frequency.
-- `scrape_configs` – scrape job for the OTel Collector's Prometheus exporter endpoint (`:8889`).
-- `remote_write` – endpoint pointing to Grafana Cloud Prometheus (with Basic Auth credentials).
+Telemetry is pushed directly to Grafana Cloud's managed backends from the OpenTelemetry Collector. The Collector is configured with three endpoints:
 
-## 6.6 Grafana Cloud Connection
-
-Grafana Cloud requires three data source connections configured in the UI:
-
-- **Prometheus** – URL: remote_write endpoint of the Grafana Cloud Prometheus stack; auth: Basic Auth (username = stack ID, password = API token).
-- **Tempo** – URL: Grafana Cloud Tempo endpoint; auth: same API token.
-- **Loki** – URL: Grafana Cloud Loki endpoint; auth: same API token.
+- **Metrics** – Grafana Cloud Prometheus-compatible `remote_write` endpoint; auth: Basic Auth (username = stack ID, password = API token).
+- **Tempo** – Grafana Cloud Tempo OTLP endpoint; auth: same API token.
+- **Loki** – Grafana Cloud Loki endpoint; auth: same API token.
 
 All API tokens are scoped with `MetricsPublisher`, `TracesPublisher`, and `LogsPublisher` permissions. Tokens are stored as environment variables on the `observability-server` and referenced in the OTel Collector YAML – they are never committed to source control.
 
