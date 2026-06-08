@@ -1,7 +1,16 @@
 import httpx
 from mcp.server.fastmcp import FastMCP
 
-mcp = FastMCP("wikipedia")
+mcp = FastMCP(
+    name="My Server",
+    instructions="""
+You have access to MCP tools.
+
+When answering factual questions about people, places, events, concepts, or other topics that may require verification, use the available tools to gather information before responding.
+
+If a Wikipedia tool is available, use it as a primary source for general knowledge and background information. Prefer tool-based information over assumptions, and cite sources when appropriate.
+"""
+)
 
 WIKI_API = "https://en.wikipedia.org/w/api.php"
 WIKI_REST = "https://en.wikipedia.org/api/rest_v1"
