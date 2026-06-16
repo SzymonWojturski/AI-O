@@ -1,30 +1,11 @@
 #!/usr/bin/env bash
-#
-# setup.sh - przygotowuje czystą maszyne Ubuntu (EC2) do uruchomienia
-# aplikacji Gemini + serwer MCP Wikipedia.
-#
-# Zaloznia:
-#   - w tym samym katalogu leza pliki: app.py oraz wikipedia_server.py
-#   - mamy dostep do internetu (Gemini API + Wikipedia)
-#
-# Uzycie:
-#   chmod +x setup.sh
-#   ./setup.sh
-#
-# Klucz Gemini mozna podac na 2 sposoby:
-#   1) wyeksportowac przed uruchomieniem:  export GEMINI_API_KEY=AIza...
-#   2) skrypt zapyta o niego interaktywnie, jesli nie znajdzie w srodowisku
-#      ani w istniejacym pliku .env
-
 set -euo pipefail
 
-# --- katalog, w ktorym lezy ten skrypt (i pliki aplikacji) ---
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 echo "==> Katalog roboczy: $SCRIPT_DIR"
 
-# --- sprawdzenie, ze pliki aplikacji sa na miejscu ---
 for f in app.py wikipedia_server.py; do
     if [[ ! -f "$f" ]]; then
         echo "BLAD: brak pliku '$f' w katalogu $SCRIPT_DIR" >&2
@@ -34,7 +15,6 @@ for f in app.py wikipedia_server.py; do
 done
 echo "==> Pliki app.py i wikipedia_server.py znalezione."
 
-# --- instalacja zaleznosci systemowych ---
 echo "==> Aktualizacja pakietow i instalacja Pythona + venv..."
 sudo apt-get update -y
 sudo apt-get install -y python3 python3-venv python3-pip
@@ -42,7 +22,6 @@ sudo apt-get install -y python3 python3-venv python3-pip
 echo "==> Wersja Pythona:"
 python3 --version
 
-# --- utworzenie wirtualnego srodowiska ---
 if [[ ! -d "venv" ]]; then
     echo "==> Tworze wirtualne srodowisko venv..."
     python3 -m venv venv
@@ -50,10 +29,8 @@ else
     echo "==> venv juz istnieje - pomijam tworzenie."
 fi
 
-# shellcheck disable=SC1091
 source venv/bin/activate
 
-# --- instalacja bibliotek Pythona ---
 echo "==> Instaluje biblioteki Pythona..."
 pip install --upgrade pip
 pip install \
@@ -67,7 +44,6 @@ pip install \
 
 opentelemetry-bootstrap --action=install
 
-# --- przygotowanie pliku .env z kluczem Gemini ---
 if [[ -f ".env" ]] && grep -q "GEMINI_API_KEY=" .env; then
     echo "==> Plik .env z kluczem juz istnieje - pomijam."
 else
@@ -88,7 +64,6 @@ else
     chmod 600 .env
 fi
 
-# --- token Grafana Cloud (OTLP_HEADERS) ---
 if [[ -f ".env" ]] && grep -q "OTLP_HEADERS=" .env; then
     echo "==> OTLP_HEADERS juz istnieje w .env - pomijam."
 else
@@ -108,21 +83,3 @@ else
         fi
     fi
 fi
-
-echo ""
-echo "============================================================"
-echo " Gotowe. Srodowisko przygotowane."
-echo "============================================================"
-echo ""
-echo "Aby uruchomic aplikacje, potrzebujesz DWOCH terminali:"
-echo ""
-echo "  Terminal 1 (serwer MCP Wikipedia):"
-echo "    cd $SCRIPT_DIR && source venv/bin/activate"
-echo "    python wikipedia_server.py"
-echo ""
-echo "  Terminal 2 (aplikacja - czat z Gemini):"
-echo "    cd $SCRIPT_DIR && source venv/bin/activate"
-echo "    python app.py"
-echo ""
-echo "Mozesz tez uzyc skryptu pomocniczego: ./run.sh"
-echo "============================================================"
