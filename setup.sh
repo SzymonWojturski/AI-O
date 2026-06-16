@@ -61,7 +61,11 @@ pip install \
     "mcp[cli]" \
     httpx \
     python-dotenv \
-    openlit
+    openlit \
+    opentelemetry-distro \
+    opentelemetry-exporter-otlp
+
+opentelemetry-bootstrap --action=install
 
 # --- przygotowanie pliku .env z kluczem Gemini ---
 if [[ -f ".env" ]] && grep -q "GEMINI_API_KEY=" .env; then
@@ -82,6 +86,27 @@ else
         echo "==> Klucz zapisany do .env"
     fi
     chmod 600 .env
+fi
+
+# --- token Grafana Cloud (OTLP_HEADERS) ---
+if [[ -f ".env" ]] && grep -q "OTLP_HEADERS=" .env; then
+    echo "==> OTLP_HEADERS juz istnieje w .env - pomijam."
+else
+    if [[ -n "${OTLP_HEADERS:-}" ]]; then
+        echo "==> Zapisuje OTLP_HEADERS ze zmiennej srodowiskowej do .env"
+        echo "OTLP_HEADERS=\"${OTLP_HEADERS}\"" >> .env
+    else
+        echo ""
+        echo "Wklej wartosc OTLP_HEADERS z Grafany (cala linia 'Authorization=Basic ...')."
+        echo "Mozesz zostawic puste, jesli na razie uzywasz lokalnego OpenLIT."
+        read -rp "OTLP_HEADERS: " USER_HEADERS
+        if [[ -n "$USER_HEADERS" ]]; then
+            echo "OTLP_HEADERS=\"${USER_HEADERS}\"" >> .env
+            echo "==> OTLP_HEADERS zapisany do .env"
+        else
+            echo "==> Pominieto OTLP_HEADERS (tryb lokalny)."
+        fi
+    fi
 fi
 
 echo ""
