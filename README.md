@@ -334,3 +334,32 @@ Several conclusions emerge from the work:
 
 **Limitations and future work.** The current setup uses a CLI client and a single host, which is well suited to a demonstration but not to production load or multiple concurrent users. Natural next steps include adding alerting rules on latency and error rates, building dedicated Grafana dashboards on top of the collected metrics, and load-testing the MCP server to characterise its behaviour under concurrency.
 ## 11. References
+
+### LLM and SDK
+- Google Gen AI SDK (`google-genai`) — Python documentation: https://googleapis.github.io/python-genai/
+- Google AI Studio (Gemini API keys): https://aistudio.google.com/
+- Gemini API documentation: https://ai.google.dev/gemini-api/docs
+- Gemini API function calling / tool use: https://ai.google.dev/gemini-api/docs/function-calling
+- Gemini API rate limits: https://ai.google.dev/gemini-api/docs/rate-limits
+
+### Model Context Protocol (MCP)
+- Model Context Protocol — official site: https://modelcontextprotocol.io/
+- MCP Python SDK (FastMCP): https://github.com/modelcontextprotocol/python-sdk
+
+### External data source (Wikipedia)
+- Wikimedia REST API: https://en.wikipedia.org/api/rest_v1/
+- Wikimedia User-Agent policy: https://meta.wikimedia.org/wiki/User-Agent_policy
+
+### Observability
+- OpenLIT — documentation: https://docs.openlit.io/
+- OpenLIT — GitHub repository: https://github.com/openlit/openlit
+- OpenTelemetry — Python documentation: https://opentelemetry.io/docs/languages/python/
+- OpenTelemetry — tracing concepts (spans): https://opentelemetry.io/docs/concepts/signals/traces/
+
+### Visualization / backend
+- Grafana Cloud — OpenTelemetry (OTLP) setup: https://grafana.com/docs/grafana-cloud/send-data/otlp/
+- Grafana Cloud — documentation: https://grafana.com/docs/grafana-cloud/
+
+### Infrastructure
+- AWS EC2 — documentation: https://docs.aws.amazon.com/ec2/
+- AWS Academy Learner Lab: https://awsacademy.instructure.com/
